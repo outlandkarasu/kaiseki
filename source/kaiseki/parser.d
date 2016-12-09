@@ -95,3 +95,30 @@ unittest {
     assert(c.position == 4);
 }
 
+/// parse character set
+bool parseSet(alias S, R)(Context!R context) {
+    if(!context.empty) {
+        auto front = context.front;
+        foreach(c; S) {
+            if(c == front) {
+                context.popFront();
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+///
+unittest {
+    assert(context("test").parseSet!"stuv");
+    assert(context("sest").parseSet!"stuv");
+    assert(!context("eest").parseSet!"stuv");
+
+    auto c = context("test");
+    assert(c.parseSet!"vut");
+    assert(c.position == 1);
+    assert(!c.parseSet!"vut");
+    assert(c.position == 1);
+}
+
