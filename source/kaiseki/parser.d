@@ -245,3 +245,28 @@ unittest {
     assert(c.position == 3);
 }
 
+/// sequence parser
+template sequence(P...) {
+    bool sequence(R)(Context!R context) {
+        context.start();
+        foreach(p; P) {
+            if(!p(context)) {
+                context.reject();
+                return false;
+            }
+        }
+
+        context.accept();
+        return true;
+    }
+}
+
+///
+unittest {
+    auto c = context("test");
+    assert(c.sequence!(parseChar!'t', parseChar!'e'));
+    assert(c.position == 2);
+    assert(!c.sequence!(parseChar!'s', parseChar!'e'));
+    assert(c.position == 2);
+}
+
