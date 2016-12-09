@@ -122,3 +122,27 @@ unittest {
     assert(c.position == 1);
 }
 
+/// parse character range
+bool parseRange(alias C1, alias C2, R)(Context!R context) {
+    if(!context.empty) {
+        auto front = context.front;
+        if(C1 <= front && front <= C2) {
+            context.popFront();
+            return true;
+        }
+    }
+    return false;
+}
+
+///
+unittest {
+    assert(context("test").parseRange!('a', 'z'));
+    assert(!context("test").parseRange!('0', '9'));
+
+    auto c = context("test");
+    assert(c.parseRange!('a', 'z'));
+    assert(c.position == 1);
+    assert(!c.parseRange!('0', '9'));
+    assert(c.position == 1);
+}
+
