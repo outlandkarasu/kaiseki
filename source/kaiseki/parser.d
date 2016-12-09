@@ -44,12 +44,14 @@ unittest {
 }
 
 /// parse a character.
-bool parseChar(alias C, R)(Context!R context) {
-    if(!context.empty && context.front == C) {
-        context.popFront();
-        return true;
+template parseChar(alias C) {
+    bool parseChar(R)(Context!R context) {
+        if(!context.empty && context.front == C) {
+            context.popFront();
+            return true;
+        }
+        return false;
     }
-    return false;
 }
 
 ///
@@ -65,18 +67,19 @@ unittest {
 }
 
 /// parse string
-bool parseString(alias S, R)(Context!R context) {
-    context.start();
-    foreach(c; S) {
-        if(context.empty || context.front != c) {
-            context.reject();
-            return false;
+template parseString(alias S) {
+    bool parseString(R)(Context!R context) {
+        context.start();
+        foreach(c; S) {
+            if(context.empty || context.front != c) {
+                context.reject();
+                return false;
+            }
+            context.popFront();
         }
-        context.popFront();
+        context.accept();
+        return true;
     }
-
-    context.accept();
-    return true;
 }
 
 ///
@@ -96,17 +99,19 @@ unittest {
 }
 
 /// parse character set
-bool parseSet(alias S, R)(Context!R context) {
-    if(!context.empty) {
-        auto front = context.front;
-        foreach(c; S) {
-            if(c == front) {
-                context.popFront();
-                return true;
+template parseSet(alias S) {
+    bool parseSet(R)(Context!R context) {
+        if(!context.empty) {
+            auto front = context.front;
+            foreach(c; S) {
+                if(c == front) {
+                    context.popFront();
+                    return true;
+                }
             }
         }
+        return false;
     }
-    return false;
 }
 
 ///
@@ -123,15 +128,17 @@ unittest {
 }
 
 /// parse character range
-bool parseRange(alias C1, alias C2, R)(Context!R context) {
-    if(!context.empty) {
-        auto front = context.front;
-        if(C1 <= front && front <= C2) {
-            context.popFront();
-            return true;
+template parseRange(alias C1, alias C2) {
+    bool parseRange(R)(Context!R context) {
+        if(!context.empty) {
+            auto front = context.front;
+            if(C1 <= front && front <= C2) {
+                context.popFront();
+                return true;
+            }
         }
+        return false;
     }
-    return false;
 }
 
 ///
@@ -144,5 +151,21 @@ unittest {
     assert(c.position == 1);
     assert(!c.parseRange!('0', '9'));
     assert(c.position == 1);
+}
+
+/// test parser
+template testAnd(alias P) {
+    bool testAnd(R)(Context!R context) {
+        context.start();
+        scope(exit) context.reject();
+        return P(context);
+    }
+}
+
+///
+unittest {
+    auto c = context("test");
+    assert(c.testAnd!(parseChar!('t')));
+    assert(c.position == 0);
 }
 
