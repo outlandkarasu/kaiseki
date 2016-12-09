@@ -270,3 +270,24 @@ unittest {
     assert(c.position == 2);
 }
 
+/// choice parser
+template choice(P...) {
+    bool choice (R)(Context!R context) {
+        foreach(p; P) {
+            if(p(context)) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+///
+unittest {
+    auto c = context("test");
+    assert(c.choice!(parseChar!'t', parseChar!'e'));
+    assert(c.position == 1);
+    assert(!c.choice!(parseChar!'s', parseChar!'t'));
+    assert(c.position == 1);
+}
+
