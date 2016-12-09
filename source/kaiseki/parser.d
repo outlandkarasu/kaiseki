@@ -64,3 +64,34 @@ unittest {
     assert(c.position == 1);
 }
 
+/// parse string
+bool parseString(alias S, R)(Context!R context) {
+    context.start();
+    foreach(c; S) {
+        if(context.empty || context.front != c) {
+            context.reject();
+            return false;
+        }
+        context.popFront();
+    }
+
+    context.accept();
+    return true;
+}
+
+///
+unittest {
+    assert(context("test").parseString!"test");
+    assert(!context("etst").parseString!"test");
+
+    auto c = context("test");
+    assert(c.parseString!"te");
+    assert(c.position == 2);
+
+    assert(!c.parseString!"ss");
+    assert(c.position == 2);
+
+    assert(c.parseString!"st");
+    assert(c.position == 4);
+}
+
