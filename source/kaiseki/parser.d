@@ -167,5 +167,25 @@ unittest {
     auto c = context("test");
     assert(c.testAnd!(parseChar!('t')));
     assert(c.position == 0);
+    assert(!c.testAnd!(parseChar!('s')));
+    assert(c.position == 0);
+}
+
+/// test not parser
+template testNot(alias P) {
+    bool testNot(R)(Context!R context) {
+        context.start();
+        scope(exit) context.reject();
+        return !P(context);
+    }
+}
+
+///
+unittest {
+    auto c = context("test");
+    assert(!c.testNot!(parseChar!('t')));
+    assert(c.position == 0);
+    assert(c.testNot!(parseChar!('s')));
+    assert(c.position == 0);
 }
 
