@@ -189,3 +189,42 @@ unittest {
     assert(c.position == 0);
 }
 
+/// zero or more parser
+template zeroOrMore(alias P) {
+    bool zeroOrMore(R)(Context!R context) {
+        while(P(context)) {
+            // do nothing
+        }
+        return true;
+    }
+}
+
+///
+unittest {
+    auto c = context("tttest");
+    assert(c.zeroOrMore!(parseChar!('t')));
+    assert(c.position == 3);
+    assert(c.zeroOrMore!(parseChar!('t')));
+    assert(c.position == 3);
+}
+
+/// one or more parser
+template oneOrMore(alias P) {
+    bool oneOrMore(R)(Context!R context) {
+        bool result = false;
+        while(P(context)) {
+            result = true;
+        }
+        return result;
+    }
+}
+
+///
+unittest {
+    auto c = context("tttest");
+    assert(c.oneOrMore!(parseChar!('t')));
+    assert(c.position == 3);
+    assert(!c.oneOrMore!(parseChar!('t')));
+    assert(c.position == 3);
+}
+
