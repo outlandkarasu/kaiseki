@@ -189,6 +189,23 @@ unittest {
     assert(c.position == 0);
 }
 
+/// zero or one parser
+template zeroOrOne(alias P) {
+    bool zeroOrOne(R)(Context!R context) {
+        P(context);
+        return true;
+    }
+}
+
+///
+unittest {
+    auto c = context("tttest");
+    assert(c.zeroOrOne!(parseChar!('t')));
+    assert(c.position == 1);
+    assert(c.zeroOrOne!(parseChar!('e')));
+    assert(c.position == 1);
+}
+
 /// zero or more parser
 template zeroOrMore(alias P) {
     bool zeroOrMore(R)(Context!R context) {
