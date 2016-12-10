@@ -5,8 +5,7 @@ module kaiseki.context;
 
 import std.algorithm : each;
 import std.range : isInputRange, ElementType;
-import std.array : front, empty, popFront, save;
-import std.container : Array;
+import std.array : front, empty, popFront, save, Appender;
 import std.string : format;
 
 import kaiseki.buffer : InputRangeBuffer;
@@ -36,7 +35,7 @@ class Context(R) {
 
     void start(EventHandler handler = null) {
         immutable pos = buffer_.position;
-        immutable epos = events_.length;
+        immutable epos = events_.data.length;
 
         if(handler is null) {
             states_ ~= State(pos, epos, false);
@@ -48,32 +47,31 @@ class Context(R) {
 
     void accept()
     in {
-        assert(!states_.empty);
+        assert(!states_.data.empty);
     } body {
         // add an accept event
-        immutable s = states_.back;
+        immutable s = lastState;
         if(s.hasEvent) {
-            events_[s.eventPosition].end = buffer_.position;
+            events_.data[s.eventPosition].end = buffer_.position;
         }
 
         // if only have a last state, call event handler
-        if(states_.length == 1) {
-            events_.each!(e => e.handler(buffer_[e.start .. e.end]));
+        if(states_.data.length == 1) {
+            events_.data.each!(e => e.handler(buffer_[e.start .. e.end]));
             events_.clear();
             buffer_.clear();
         }
-
-        states_.removeBack();
+        popState();
     }
 
     void reject()
     in {
-        assert(!states_.empty);
+        assert(!states_.data.empty);
     } body {
-        immutable s = states_.back;
-        states_.removeBack();
+        immutable s = lastState;
         buffer_.position = s.position;
-        events_.length = s.eventPosition;
+        events_.shrinkTo(s.eventPosition);
+        popState();
     }
 
 private:
@@ -89,9 +87,23 @@ private:
         bool hasEvent;
     }
 
+    @property ref const(State) lastState() const @safe pure nothrow @nogc
+    in {
+        assert(!states_.data.empty);
+    } body {
+        return states_.data[$ - 1];
+    }
+
+    void popState()
+    in {
+        assert(!states_.data.empty);
+    } body {
+        states_.shrinkTo(states_.data.length - 1);
+    }
+
     InputRangeBuffer!Range buffer_;
-    Array!State states_;
-    Array!Event events_;
+    Appender!(State[]) states_;
+    Appender!(Event[]) events_;
 }
 
 auto context(R)(R range) {return new Context!R(range);}
