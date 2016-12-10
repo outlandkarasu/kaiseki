@@ -3,7 +3,7 @@
  */
 module kaiseki.parser;
 
-import kaiseki.context;
+import kaiseki.context : Context, context;
 
 /// match an any char.
 bool parseAny(R)(Context!R context) {

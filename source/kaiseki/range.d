@@ -1,9 +1,9 @@
 /**
- *  source buffer classes.
+ *  source range classes.
  */
-module kaiseki.buffer;
+module kaiseki.range;
 
-import std.algorithm : copy;
+import std.algorithm : copy, equal;
 import std.array : Appender, front, empty, popFront;
 import std.range : isInputRange, ElementType;
 import std.traits : Unqual;
@@ -155,3 +155,72 @@ unittest {
     auto b = buffer(bytes);
     assert(b.front == 0);
 }
+
+/// flatten range which has other range elements.
+struct FlattenRange(R) {
+    static assert(isInputRange!(ElementType!R));
+    alias InnerRange = ElementType!R;
+    alias Element = ElementType!InnerRange;
+
+    this(R range) {
+        this.range_ = range;
+
+        // move to first range.
+        moveNextRange();
+    }
+
+    @property {
+        Element front()
+        in {
+            assert(!empty);
+        } body {
+            return currentRange_.front;
+        }
+        bool empty() {return empty_;}
+    }
+
+    void popFront()
+    in {
+        assert(!empty);
+    } body {
+        // pop from current range.
+        if(!currentRange_.empty) {
+            currentRange_.popFront();
+            if(!currentRange_.empty) {
+                return;
+            }
+        }
+
+        // current range is empty. move to next range.
+        range_.popFront();
+        moveNextRange();
+    }
+
+private:
+    void moveNextRange() {
+        empty_ = true;
+        for(; !range_.empty; range_.popFront()) {
+            currentRange_ = range_.front;
+            if(!currentRange_.empty) {
+                // found non empty range.
+                this.empty_ = false;
+                break;
+            }
+        }
+    }
+
+    bool empty_;
+    R range_;
+    InnerRange currentRange_;
+}
+
+/// make flatten range
+auto flatten(R)(R range) {return FlattenRange!R(range);}
+
+///
+unittest {
+    assert(flatten(["abc", "de", "f", ""]).equal("abcdef"));
+    assert(flatten(["", "", "", ""]).empty);
+    assert(flatten(["", "a", "b", "c"]).equal("abc"));
+}
+

@@ -8,7 +8,7 @@ import std.range : isInputRange, ElementType;
 import std.array : front, empty, popFront, save, Appender;
 import std.string : format;
 
-import kaiseki.buffer : InputRangeBuffer;
+import kaiseki.range : InputRangeBuffer;
 
 /**
  *  Params:
