@@ -6,12 +6,14 @@ module kaiseki.buffer;
 import std.algorithm : copy;
 import std.array : Appender, front, empty, popFront;
 import std.range : isInputRange, ElementType;
+import std.traits : Unqual;
 
 /// back trackable range buffer
 struct InputRangeBuffer(R) {
     static assert(isInputRange!R);
+
     alias OriginalRange = R;
-    alias Element = ElementType!R;
+    alias Element = Unqual!(ElementType!R);
 
     this(R r) {
         this.range_ = r;
@@ -21,7 +23,7 @@ struct InputRangeBuffer(R) {
     }
 
     @property const {
-        Element front()
+        const(Element) front()
         in {
             assert(!empty);
         } body {
@@ -63,7 +65,7 @@ struct InputRangeBuffer(R) {
         bufferStart_ = position_;
     }
 
-    const(Element[]) opSlice(size_t start, size_t end) const
+    const(Element)[] opSlice(size_t start, size_t end) const
     in {
         assert(bufferStart_ <= start && start <= end);
         assert(end <= (empty ? position : position + 1));
@@ -148,3 +150,8 @@ unittest {
     assert(b.bufferStart == 4);
 }
 
+unittest {
+    immutable(ubyte)[] bytes = [0, 1, 2, 3];
+    auto b = buffer(bytes);
+    assert(b.front == 0);
+}

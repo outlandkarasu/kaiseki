@@ -1,5 +1,6 @@
 {
 	"name": "kaiseki",
+        "targetType": "library",
 	"authors": [
 		"outland.karasu@gmail.com"
 	],
