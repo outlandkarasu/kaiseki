@@ -19,7 +19,7 @@ class Context(R) {
 
     alias Range = R;
     alias Character = ElementType!Range;
-    alias EventHandler = void delegate(const(Character[]) r);
+    alias EventHandler = void delegate(const(Character)[] r);
 
     this(R range) {
         this.buffer_ = InputRangeBuffer!Range(range);
@@ -141,7 +141,7 @@ unittest {
     auto c = context("test");
 
     typeof(c).EventHandler makeHandler(string tag) {
-        typeof(return) handler = (const(dchar[]) match) {
+        typeof(return) handler = (const(dchar)[] match) {
             accepted ~= format("%s %s", tag, match);
         };
         return handler;

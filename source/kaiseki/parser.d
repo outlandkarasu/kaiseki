@@ -272,7 +272,7 @@ unittest {
 
 /// choice parser
 template choice(P...) {
-    bool choice (R)(Context!R context) {
+    bool choice(R)(Context!R context) {
         foreach(p; P) {
             if(p(context)) {
                 return true;
@@ -289,5 +289,39 @@ unittest {
     assert(c.position == 1);
     assert(!c.choice!(parseChar!'s', parseChar!'t'));
     assert(c.position == 1);
+}
+
+/// action parser
+template action(alias P, alias A) {
+    bool action(R)(Context!R context) {
+        context.start(A);
+        if(P(context)) {
+            context.accept();
+            return true;
+        }
+        context.reject();
+        return false;
+    }
+}
+
+///
+unittest {
+    const(dchar)[] buffer;
+    auto handler = (const(dchar)[] match) {buffer ~= match.dup;};
+
+    alias parse = choice!(
+        action!(parseString!"testa", handler),
+        sequence!(
+            action!(parseString!"tes", handler), // match once but not call handler.
+            action!(parseString!"ta", handler),
+            ),
+        action!(parseString!"test", handler),
+    );
+
+    auto c = context("test");
+    assert(parse(c));
+    assert(c.empty);
+    assert(c.position == 4);
+    assert(buffer == "test");
 }
 
