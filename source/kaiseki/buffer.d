@@ -63,6 +63,14 @@ struct InputRangeBuffer(R) {
         bufferStart_ = position_;
     }
 
+    const(Element[]) opSlice(size_t start, size_t end) const
+    in {
+        assert(bufferStart_ <= start && start <= end);
+        assert(end <= (empty ? position : position + 1));
+    } body {
+        return buffer_.data[start - bufferStart_ .. end - bufferStart_];
+    }
+
 private:
     @property inout(Element)[] data() inout {
         return buffer_.data[position_ - bufferStart_ .. $];
@@ -79,53 +87,62 @@ auto buffer(R)(R r) {return InputRangeBuffer!R(r);}
 ///
 unittest {
     auto b = buffer("test");
+    assert(b[0 .. 1] == "t");
     assert(b.front == 't');
     assert(!b.empty);
     assert(b.position == 0);
     assert(b.bufferStart == 0);
 
     b.popFront();
+    assert(b[0 .. 2] == "te");
     assert(b.front == 'e');
     assert(!b.empty);
     assert(b.position == 1);
     assert(b.bufferStart == 0);
 
     b.popFront();
+    assert(b[0 .. 3] == "tes");
     assert(b.front == 's');
     assert(!b.empty);
     assert(b.position == 2);
     assert(b.bufferStart == 0);
 
     b.position = 1;
+    assert(b[0 .. 2] == "te");
     assert(b.front == 'e');
     assert(!b.empty);
     assert(b.position == 1);
     assert(b.bufferStart == 0);
 
     b.popFront();
+    assert(b[0 .. 3] == "tes");
     assert(b.front == 's');
     assert(!b.empty);
     assert(b.position == 2);
     assert(b.bufferStart == 0);
 
     b.clear();
+    assert(b[2 .. 3] == "s");
     assert(b.front == 's');
     assert(!b.empty);
     assert(b.position == 2);
     assert(b.bufferStart == 2);
 
     b.popFront();
+    assert(b[2 .. 4] == "st");
     assert(b.front == 't');
     assert(!b.empty);
     assert(b.position == 3);
     assert(b.bufferStart == 2);
 
     b.popFront();
+    assert(b[2 .. 4] == "st");
     assert(b.empty);
     assert(b.position == 4);
     assert(b.bufferStart == 2);
 
     b.clear();
+    assert(b[4 .. 4].empty);
     assert(b.empty);
     assert(b.position == 4);
     assert(b.bufferStart == 4);

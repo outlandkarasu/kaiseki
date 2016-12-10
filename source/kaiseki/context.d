@@ -4,58 +4,46 @@
 module kaiseki.context;
 
 import std.algorithm : each;
-import std.range : isForwardRange, ElementType;
+import std.range : isInputRange, ElementType;
 import std.array : front, empty, popFront, save;
 import std.container : Array;
 import std.string : format;
+
+import kaiseki.buffer : InputRangeBuffer;
 
 /**
  *  Params:
  *      R = source range.
  */
 class Context(R) {
+    static assert(isInputRange!R);
+
     alias Range = R;
     alias Character = ElementType!Range;
-
-    static assert(isForwardRange!Range);
-
-    /// parsing event
-    struct Event {
-        enum Type {Start, End}
-        Type type;
-        size_t position;
-        Range range;
-        EventHandler handler;
-
-        void doEvent() const {
-            if(handler !is null) {
-                handler(this);
-            }
-        }
-    }
-
-    /// event handler
-    alias EventHandler = void delegate(ref const(Event) e);
+    alias EventHandler = void delegate(const(Character[]) r);
 
     this(R range) {
-        this.range_ = range;
+        this.buffer_ = InputRangeBuffer!Range(range);
     }
 
     @property const {
-        Character front() {return range_.front;}
-        bool empty() {return range_.empty;}
-        size_t position() {return position_;}
+        Character front() {return buffer_.front;}
+        bool empty() {return buffer_.empty;}
+        size_t position() {return buffer_.position;}
     }
 
-    void popFront() {
-        range_.popFront();
-        ++position_;
-    }
+    void popFront() {buffer_.popFront();}
 
     void start(EventHandler handler = null) {
-        auto r = range_.save;
-        states_ ~= State(position_, r, events_.length, handler);
-        events_ ~= Event(Event.Type.Start, position_, r, handler);
+        immutable pos = buffer_.position;
+        immutable epos = events_.length;
+
+        if(handler is null) {
+            states_ ~= State(pos, epos, false);
+        } else {
+            states_ ~= State(pos, epos, true);
+            events_ ~= Event(handler, pos);
+        }
     }
 
     void accept()
@@ -64,16 +52,15 @@ class Context(R) {
     } body {
         // add an accept event
         immutable s = states_.back;
-        events_ ~= Event(Event.Type.End, position_, range_.save, s.handler);
+        if(s.hasEvent) {
+            events_[s.eventPosition].end = buffer_.position;
+        }
 
         // if only have a last state, call event handler
         if(states_.length == 1) {
-            // reset events state if handler throw exceptions.
-            scope(failure) events_.removeBack(); 
-            foreach(e; events_) {
-                e.doEvent();
-            }
+            events_.each!(e => e.handler(buffer_[e.start .. e.end]));
             events_.clear();
+            buffer_.clear();
         }
 
         states_.removeBack();
@@ -85,26 +72,26 @@ class Context(R) {
     } body {
         immutable s = states_.back;
         states_.removeBack();
-
-        // reset to a before state
-        range_ = s.range;
-        position_ = s.position;
-        events_.length = s.eventLength;
+        buffer_.position = s.position;
+        events_.length = s.eventPosition;
     }
 
 private:
-    struct State {
-        size_t position;
-        Range range;
-        size_t eventLength;
+    struct Event {
         EventHandler handler;
+        size_t start;
+        size_t end;
     }
 
-    Range range_;
-    size_t position_;
+    struct State {
+        size_t position;
+        size_t eventPosition;
+        bool hasEvent;
+    }
+
+    InputRangeBuffer!Range buffer_;
     Array!State states_;
     Array!Event events_;
-    EventHandler handler_;
 }
 
 auto context(R)(R range) {return new Context!R(range);}
@@ -142,8 +129,8 @@ unittest {
     auto c = context("test");
 
     typeof(c).EventHandler makeHandler(string tag) {
-        typeof(return) handler = (ref e) {
-            accepted ~= format("%s %s %d %s", tag, e.type, e.position, e.range);
+        typeof(return) handler = (const(dchar[]) match) {
+            accepted ~= format("%s %s", tag, match);
         };
         return handler;
     }
@@ -154,10 +141,14 @@ unittest {
     // state 1
     c.start(makeHandler("1"));
     c.popFront();
+    assert(c.front == 'e');
+    assert(c.position == 1);
 
     // state 2
     c.start(makeHandler("2"));
     c.popFront();
+    assert(c.front == 's');
+    assert(c.position == 2);
 
     // state 3
     c.start(makeHandler("3"));
@@ -183,9 +174,8 @@ unittest {
     // accept state 1
     c.accept();
 
-    assert(accepted[0] == "1 Start 0 test", accepted[0]);
-    assert(accepted[1] == "2 Start 1 est", accepted[1]);
-    assert(accepted[2] == "2 End 3 t", accepted[2]);
-    assert(accepted[3] == "1 End 4 ", accepted[3]);
+    assert(accepted.length == 2);
+    assert(accepted[0] == "1 test", accepted[0]);
+    assert(accepted[1] == "2 es", accepted[1]);
 }
 
