@@ -5,6 +5,22 @@ module kaiseki.parser;
 
 import kaiseki.context : Context, context;
 
+/// match any state.
+bool parseTrue(R)(Context!R context) {
+    return true;
+}
+
+///
+unittest {
+    assert(context("a").parseTrue);
+    assert(context("").parseTrue);
+
+    auto c = context("test");
+    assert(c.parseTrue);
+    assert(c.position == 0);
+}
+
+
 /// match an any char.
 bool parseAny(R)(Context!R context) {
     if(!context.empty) {
